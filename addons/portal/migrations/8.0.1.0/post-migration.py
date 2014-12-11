@@ -40,20 +40,26 @@ def migrate_group_users(cr, uid, pool):
     :param cr: cursor
     '''
     data_obj = pool['ir.model.data']
-    old_group_portal = data_obj.get_object_reference(cr, uid, 'portal', 'group_portal')[1]
-    new_group_portal = data_obj.get_object_reference(cr, uid, 'base', 'group_portal')[1]
-    if old_group_portal and new_group_portal:
-        cr.execute("""update res_groups_users_rel set gid=%s where gid=%s""",
-                   (new_group_portal, old_group_portal,))
-        cr.execute("""DELETE FROM res_groups WHERE id = %s""", (old_group_portal,))
+    try:
+        old_group_portal = data_obj.get_object_reference(cr, uid, 'portal', 'group_portal')[1]
+        new_group_portal = data_obj.get_object_reference(cr, uid, 'base', 'group_portal')[1]
+        if old_group_portal and new_group_portal:
+            cr.execute("""update res_groups_users_rel set gid=%s where gid=%s""",
+                       (new_group_portal, old_group_portal,))
+            cr.execute("""DELETE FROM res_groups WHERE id = %s""", (old_group_portal,))
+    except ValueError:
+        pass
 
-    old_group_anonymous = data_obj.get_object_reference(cr, uid, 'portal', 'group_anonymous')[1]
-    new_group_public = data_obj.get_object_reference(cr, uid, 'base', 'group_public')[1]
+    try:
+        old_group_anonymous = data_obj.get_object_reference(cr, uid, 'portal', 'group_anonymous')[1]
+        new_group_public = data_obj.get_object_reference(cr, uid, 'base', 'group_public')[1]
 
-    if old_group_anonymous and new_group_public:
-        cr.execute("""update res_groups_users_rel set gid=%s where gid=%s""",
-                   (new_group_public, old_group_anonymous,))
-        cr.execute("""DELETE FROM res_groups WHERE id = %s""", (old_group_anonymous,))
+        if old_group_anonymous and new_group_public:
+            cr.execute("""update res_groups_users_rel set gid=%s where gid=%s""",
+                       (new_group_public, old_group_anonymous,))
+            cr.execute("""DELETE FROM res_groups WHERE id = %s""", (old_group_anonymous,))
+    except ValueError:
+        pass
 
 
 @openupgrade.migrate()
