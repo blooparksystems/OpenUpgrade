@@ -30,6 +30,41 @@ possible_dataloss_fields = [
 
 
 def migrate_warehouse_id(cr, pool, uid):
+    # get transition ids for sale_stock to disable them
+    data_obj = pool.get("ir.model.data")
+    disable_transitions = [
+        ('sale_stock', 'trans_ship_ship_except'),
+        ('sale_stock', 'trans_ship_ship_end'),
+        ('sale_stock', 'trans_wait_ship_ship'),
+        ('sale_stock', 'trans_ship_except_ship'),
+        ('sale_stock', 'trans_router_wait_ship'),
+        ('sale_stock', 'trans_router_wait_invoice_shipping'),
+        ('sale_stock', 'trans_wait_invoice_invoice'),
+        ('sale_stock', 'trans_wait_ship_cancel3a'),
+        ('sale_stock', 'trans_ship_end_done'),
+        ('sale_stock', 'trans_ship_except_ship_end'),
+        ('sale_stock', 'trans_ship_except_ship_cancel'),
+    ]
+    transition_conditions = {}
+    for module, name in disable_transitions:
+        try:
+            transition_id = data_obj.get_object_reference(
+            cr, SUPERUSER_ID, module, name)[1]
+            transition_conditions[transition_id] = None
+        except ValueError:
+            continue
+
+    # backup values
+    cr.execute(
+        "SELECT id, condition FROM wkf_transition WHERE id in %s",
+        (tuple(transition_conditions.keys()),))
+    transition_conditions = dict(cr.fetchall())
+
+    # disabling transitions during 'sale_order' update.
+    cr.execute(
+        "UPDATE wkf_transition SET condition = 'False' WHERE id in %s",
+        (tuple(transition_conditions.keys()),))
+
     # Get the sale_order id, warehouse_id.
     so_obj = pool['sale.order']
     so_ids = []
@@ -45,6 +80,11 @@ def migrate_warehouse_id(cr, pool, uid):
         for row in cr.dictfetchall():
             so_obj.write(cr, uid, so_id, {'warehouse_id': row['warehouse_id']})
 
+    # Rewriting good values
+    for transition_id, condition in transition_conditions.iteritems():
+        cr.execute(
+            "update wkf_transition set condition = %s where id=%s",
+            (condition, transition_id))
 
 @openupgrade.migrate()
 def migrate(cr, version):
