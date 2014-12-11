@@ -47,7 +47,7 @@ def create_workitem_picking(cr, uid, pool):
         FROM stock_move
         WHERE purchase_line_id is not null
         AND state != %s""",
-        ('done'))
+        ('done',))
     for res in cr.fetchall():
         pol = pol_obj.browse(cr, uid, res[0])
 
@@ -91,7 +91,7 @@ def migrate_product_supply_method(cr):
     if mto_route_id:
         product_ids = []
         cr.execute("""SELECT id FROM product_template WHERE %s = %%s""" % (
-            procure_method_legacy, ('buy',)))
+            procure_method_legacy), ('buy',))
         product_ids = [res[0] for res in cr.fetchall()]
 
         template_obj.write(
