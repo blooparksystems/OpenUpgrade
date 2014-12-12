@@ -69,8 +69,8 @@ migrations = {
         },
         'server': {
             'type': 'git',
-            'url': 'git://github.com/OpenUpgrade/OpenUpgrade.git',
-            'branch': '8.0',
+            'url': 'https://github.com/blooparksystems/OpenUpgrade.git',
+            'branch': 'migration',
             'addons_dir': os.path.join('openerp', 'addons'),
             'root_dir': os.path.join(''),
             'cmd': 'openerp-server --update=all --database=%(db)s '
