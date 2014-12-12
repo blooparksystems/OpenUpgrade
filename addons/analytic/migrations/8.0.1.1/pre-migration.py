@@ -21,4 +21,4 @@ from openerp.openupgrade import openupgrade
 @openupgrade.migrate()
 def migrate(cr, version):
     # Drop view that inhibits changing field types. It will be recreated BTW
-    cr.execute('drop view if exists account_analytic_line cascade')
+    cr.execute('drop view if exists analytic_entries_report cascade')
