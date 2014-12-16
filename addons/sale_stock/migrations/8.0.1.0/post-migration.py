@@ -21,11 +21,17 @@
 
 from openerp.modules.registry import RegistryManager
 from openerp.openupgrade import openupgrade
-from openerp import pooler, SUPERUSER_ID
+from openerp import SUPERUSER_ID
 
 possible_dataloss_fields = [
-    {'table': 'sale_order_line_property_rel', 'field': 'order_id', 'new_module': 'sale_mrp'},
-    {'table': 'sale_order_line_property_rel', 'field': 'property_id', 'new_module': 'sale_mrp'}
+    {
+        'table': 'sale_order_line_property_rel',
+        'field': 'order_id', 'new_module': 'sale_mrp',
+    },
+    {
+        'table': 'sale_order_line_property_rel',
+        'field': 'property_id', 'new_module': 'sale_mrp',
+    }
 ]
 
 
@@ -65,20 +71,9 @@ def migrate_warehouse_id(cr, pool, uid):
         "UPDATE wkf_transition SET condition = 'False' WHERE id in %s",
         (tuple(transition_conditions.keys()),))
 
-    # Get the sale_order id, warehouse_id.
-    so_obj = pool['sale.order']
-    so_ids = []
-
-    sql = """SELECT id, shop_id FROM sale_order WHERE shop_id is not null"""
-    cr.execute(sql)
-    for row in cr.dictfetchall():
-        so_ids.append(row['id'])
-    for so_id in so_ids:
-        sql = """SELECT warehouse_id FROM sale_shop
-            WHERE id = (SELECT shop_id FROM sale_order WHERE id = {})""".format(so_id)
-        cr.execute(sql)
-        for row in cr.dictfetchall():
-            so_obj.write(cr, uid, so_id, {'warehouse_id': row['warehouse_id']})
+    cr.execute(
+        '''update sale_order so set warehouse_id=ss.warehouse_id
+        from sale_shop ss where so.shop_id=ss.id''')
 
     # Rewriting good values
     for transition_id, condition in transition_conditions.iteritems():
@@ -88,15 +83,14 @@ def migrate_warehouse_id(cr, pool, uid):
 
 @openupgrade.migrate()
 def migrate(cr, version):
-    registry = RegistryManager.get(cr.dbname)
-    pool = pooler.get_pool(cr.dbname)
-    uid = SUPERUSER_ID
+    pool = RegistryManager.get(cr.dbname)
 
-    migrate_warehouse_id(cr, pool, uid)
+    migrate_warehouse_id(cr)
     openupgrade.delete_model_workflow(cr, 'sale.shop')
-    openupgrade.warn_possible_dataloss(cr, pool, 'sale_stock', possible_dataloss_fields)
+    openupgrade.warn_possible_dataloss(
+        cr, pool, 'sale_stock', possible_dataloss_fields)
 
     openupgrade.m2o_to_x2m(
-        cr, registry['sale.order.line'], 'sale_order_line', 'procurement_ids',
+        cr, pool['sale.order.line'], 'sale_order_line', 'procurement_ids',
         openupgrade.get_legacy_name('procurement_id')
     )
