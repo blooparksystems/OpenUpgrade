@@ -35,8 +35,9 @@ possible_dataloss_fields = [
 ]
 
 
-def migrate_warehouse_id(cr, pool, uid):
+def migrate_warehouse_id(cr):
     # get transition ids for sale_stock to disable them
+    pool = RegistryManager.get(cr.dbname)
     data_obj = pool.get("ir.model.data")
     disable_transitions = [
         ('sale_stock', 'trans_ship_ship_except'),
