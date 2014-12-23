@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Copyright (C) 2014 Akretion (http://www.akretion.com/)
-#    @author: Alexis de Lattre <alexis.delattre@akretion.com>
-#    (<http://www.savoirfairelinux.com>).
-#    @author: Onestein <www.onestein.nl>
+#    Odoo, a suite of open source business apps
+#    This module Copyright (C) 2014 Therp BV (<http://therp.nl>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -23,18 +21,34 @@
 
 from openerp.openupgrade import openupgrade
 
-column_renames = {
-    'res_partner': [
-        ('notification_email_send', None),
-    ],
-    'mail_mail': [
-        ('email_from', None),
-        ('mail_server_id', None),
-        ('reply_to', None),
+
+xmlids = [
+    ('crm.crm_case_channel_direct', 'crm.crm_medium_direct'),
+    ('crm.crm_case_channel_email', 'crm.crm_medium_email'),
+    ('crm.crm_case_channel_phone', 'crm.crm_medium_phone'),
+    ('crm.crm_case_channel_website', 'crm.crm_medium_website'),
+    ('crm.default_sales_alias', 'crm.mail_alias_lead_info'),
     ]
-}
+
+column_renames = {
+    'crm_lead': [
+        ('channel_id', 'medium_id'),
+        ('type_id', 'campaign_id'),
+        ('priority', None),
+        ],
+    'crm_phonecall': [
+        ('priority', None),
+        ],
+    }
 
 
 @openupgrade.migrate()
 def migrate(cr, version):
-    openupgrade.rename_columns(cr, column_renames)
+    openupgrade.rename_models(
+        cr, [
+            ('crm.case.channel', 'crm.tracking.medium'),
+            ('crm.case.resource.type', 'crm.tracking.campaign'),
+            ])
+    openupgrade.rename_columns(
+        cr, column_renames)
+    openupgrade.rename_xmlids(cr, xmlids)
