@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Author: ONESTEiN B.V.
+#    Copyright (C) 2014 ONESTEiN B.V.
+#              (C) 2014 Therp B.V.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -18,7 +19,11 @@
 #
 ##############################################################################
 
+import logging
 from openerp.openupgrade import openupgrade
+
+
+logger = logging.getLogger('OpenUpgrade.stock')
 
 column_renames = {
     'product_product': [
@@ -79,28 +84,66 @@ xmlid_renames = [
 ]
 
 
-def save_rel_table(cr):
-    simr_legacy = openupgrade.get_legacy_name('stock_inventory_move_rel')
-    openupgrade.logged_query(cr, """CREATE TABLE {} AS TABLE stock_inventory_move_rel""".format(simr_legacy))
-
-
 def initialize_location_inventory(cr):
-    """Stock Inventory is upgraded before Stock Warehouse. The default value of the field location_id is searched
-    in the stock_warehouse table, asking for columns that has not been created yet because of the browse object.
-    So the query fails.
-
-    This function is a proposal to solve this problem. It creates and assigns this field like the ORM does before
-    the regular upgrade mechanism of Odoo.
-    :param cr: Database cursor
+    """Stock Inventory is upgraded before Stock Warehouse. The default value
+    of the field location_id (triggered by a missing NOT NULL constraint)
+    is searched in the stock_warehouse table, asking
+    for columns that has not been created yet because of the browse object.
+    Therefore, precreate the column and fill with values from its own lines.
+    Fallback on the stock location of the inventory's company's warehouse.
     """
+    cr.execute("ALTER TABLE stock_inventory ADD COLUMN location_id INTEGER")
+    openupgrade.logged_query(
+        cr,
+        """
+        UPDATE stock_inventory si
+        SET location_id = l.location_id
+        FROM stock_inventory_line l
+        WHERE l.inventory_id = si.id
+        """)
+    openupgrade.logged_query(
+        cr,
+        """
+        UPDATE stock_inventory si
+        SET location_id = sw.lot_stock_id
+        FROM stock_warehouse sw
+        WHERE location_id is NULL
+            AND (si.company_id = sw.company_id
+                 OR sw.company_id is NULL)
+        """)
+    cr.execute("ALTER TABLE stock_inventory "
+               "ALTER COLUMN location_id SET NOT NULL")
 
-    cr.execute("""SELECT res_id FROM ir_model_data WHERE name = %s""", ('stock_location_stock',))
-    default_location = cr.fetchone()
-    default_location = default_location and default_location[0] or False
 
-    cr.execute("""ALTER TABLE stock_inventory ADD COLUMN location_id INTEGER NOT NULL DEFAULT %s""",
-               (default_location,))
-    cr.execute("""COMMENT ON COLUMN stock_inventory.location_id IS %s""", ('Inventoried Location',))
+def swap_procurement_move_rel(cr):
+    """
+    In 7.0:
+    procurement_order.move_id: the reservation for which the procurement
+    was generated. Counterpart field on the stock
+    move is stock_move.procurements. This is the move_dest_id on the
+    purchase order lines that are created for the procurement, which is
+    propagated as the move_dest_id on the move lines created for the incoming
+    products of the purchase order. The id(s) of these move lines are recorded
+    as the purchase line's move_ids (or stock_move.purchase_line_id).
+
+    Something similar occurs in mrp: stock_move.production_id vs. production_
+    order.move_created_ids(2), and procurement_order.production_id. The
+    procurement order's move_id is production_order.move_prod_id.
+
+    In 8.0:
+    procurement_order.move_dest_id: stock move that generated the procurement
+    order, e.g. a sold product from stock to customer location. Counterpart
+    field on the stock move does not seem to exist.
+    procurement_order.move_ids: moves that the procurement order has generated,
+    e.g. a purchased product from supplier to stock location. Counterpart field
+    on the stock move is stock_move.procurement_id.
+
+    Here, we only rename the move_id column. We need to gather the
+    procurement's move_ids in purchase and mrp.
+    """
+    move_id_column = openupgrade.get_legacy_name('move_id')
+    openupgrade.rename_columns(
+        cr, {'procurement_order': [(move_id_column, 'move_dest_id')]})
 
 
 @openupgrade.migrate()
@@ -108,4 +151,9 @@ def migrate(cr, version):
     openupgrade.rename_columns(cr, column_renames)
     openupgrade.rename_xmlids(cr, xmlid_renames)
     initialize_location_inventory(cr)
-    save_rel_table(cr)
+    openupgrade.rename_tables(cr, [('stock_inventory_move_rel', None)])
+
+    have_procurement = openupgrade.column_exists(
+        cr, 'product_template', openupgrade.get_legacy_name('procure_method'))
+    if have_procurement:
+        swap_procurement_move_rel(cr)
