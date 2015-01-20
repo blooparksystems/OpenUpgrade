@@ -32,9 +32,10 @@ logger = logging.getLogger('OpenUpgrade.deferred')
 
 
 def migrate_product_valuation(cr, pool):
-    """Migrate the product valuation to a property field onproduct template.
-    This field also moved to a new module which is not installed when the
-    migration starts and thus not upgraded.
+    """Migrate the product valuation to a property field on product template.
+    This field was moved to a new module which is not installed when the
+    migration starts and thus not upgraded, which is why we do it here in the
+    deferred step.
 
     This method removes the preserved legacy column upon success, to prevent
     double runs which would be harmful.
@@ -160,9 +161,12 @@ def migrate_procurement_order_method(cr, pool):
                         action = 'buy'
                     rule_id = rules.get(location_id).get(action)
                 else:
-                    rule_id = rules.get(location_id).get('make_to_order')
+                    action = 'buy'
+                rule_id = rules.get(location_id, {}).get(action)
             else:
-                rule_id = rules.get(location_id).get('make_to_stock')
+                rule_id = rules.get(location_id, {}).get('make_to_order')
+        else:
+            rule_id = rules.get(location_id, {}).get('make_to_stock')
         if rule_id:
             procurement.write({'rule_id': rule_id})
         else:
@@ -174,6 +178,33 @@ def migrate_procurement_order_method(cr, pool):
                 procure_method, action)
 
 
+def migrate_stock_move_warehouse(cr):
+    """
+    If a database featured multiple shops with the same company but a
+    different warehouse, we can now propagate this warehouse to the
+    associated stock moves. The warehouses were written on the procurements
+    in the sale_stock module, while the moves were associated with the
+    procurements in purchase and mrp. The order of processing between
+    these modules seems to be independent, which is why we do this here
+    in the deferred step.
+    """
+    cr.execute(
+        "SELECT count(*) FROM ir_module_module WHERE name='stock' "
+        "AND state='installed'")
+    if not cr.fetchone():  # No stock
+        return
+    openupgrade.logged_query(
+        cr,
+        """
+        UPDATE stock_move sm
+        SET warehouse_id = po.warehouse_id
+        FROM procurement_order po
+        WHERE sm.procurement_id = po.id
+            OR po.move_dest_id = sm.id
+        """)
+
+
 def migrate_deferred(cr, pool):
     migrate_product_valuation(cr, pool)
     migrate_procurement_order_method(cr, pool)
+    migrate_stock_move_warehouse(cr)
