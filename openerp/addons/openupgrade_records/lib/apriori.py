@@ -7,6 +7,8 @@ renamed_modules = {
     'mrp_jit': 'procurement_jit',
     # OCA/account-invoicing
     'invoice_validation_wkfl': 'account_invoice_validation_workflow',
+    'profile_leaserad': 'lr_report',
+    'sale_dropshipping': 'lr_stock_dropshipping',
 }
 
 renamed_models = {
