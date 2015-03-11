@@ -54,7 +54,7 @@ def migrate_crm_lead_sale_order(cr):
                     ' WHERE id=%s'
                     ' AND partner_id=%s' % (crm_id, partner_id))
             res = cr.fetchone()
-            if not res:
+            if not res or not res[1] or not res[2]:
                 logger.warning(
                     "Cannot retrieve crm_lead.id '%s' "
                     "found in sale_order origin '%s'" % (crm_id, origin))
