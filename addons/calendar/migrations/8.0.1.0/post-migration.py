@@ -175,15 +175,20 @@ def migrate_alarms(cr):
 
 @openupgrade.migrate()
 def migrate(cr, version):
+    cr.execute(
+        'alter table calendar_event add column %s int' % (
+            openupgrade.get_legacy_name('crm_meeting_id'),
+        )
+    )
     recompute_date_fields(cr)
-    import_crm_meeting(cr)
+    #import_crm_meeting(cr)
     # now we filled new fields, recalculate some stored fields
     pool = RegistryManager.get(cr.dbname)
     calendar_event = pool['calendar.event']
     for field in ['start', 'stop', 'display_start']:
         calendar_event._update_store(cr, calendar_event._columns[field], field)
     migrate_attendees(cr)
-    migrate_alarms(cr)
+    #migrate_alarms(cr)
     # map renamed and deprecated reminder actions to 'notification'
     cr.execute(
         '''update calendar_alarm
