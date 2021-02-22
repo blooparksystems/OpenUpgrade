@@ -12,6 +12,7 @@ renamed_modules = {
     'hr_skill': 'hr_skills',
     # OCA/manufacture
     'quality_control': 'quality_control_oca',
+    'quality_control_stock': 'quality_control_stock_oca',
     # OCA/stock-logistics-warehouse
     'stock_putaway_product_form': 'stock_putaway_product_template',
 }
@@ -45,11 +46,15 @@ merged_modules = {
     # OCA/l10n-spain
     'l10n_es_account_invoice_sequence': 'l10n_es',
     'l10n_es_aeat_sii': 'l10n_es_aeat_sii_oca',
+    # OCA/product-attribute
+    'product_pricelist_show_product_ref': 'product',
     # OCA/server-backend
     'base_suspend_security': 'base',
     # OCA/social
     'mail_history': 'mail',
     'mass_mailing_unique': 'mass_mailing',
+    # OCA/stock-logistics-warehouse
+    'sale_stock_info_popup': 'sale_stock',
     # OCA/timesheet
     'sale_timesheet_existing_project': 'sale_timesheet',
     # OCA/web

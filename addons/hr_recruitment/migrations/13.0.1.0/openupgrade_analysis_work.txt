@@ -1,7 +1,7 @@
 ---Models in module 'hr_recruitment'---
 ---Fields in module 'hr_recruitment'---
 hr_recruitment / hr.applicant             / email_cc (text)               : type is now 'char' ('text')
-# DONE: Pre-migration: Updated type
+# NOTHING TO DO: Handled by Odoo core
 
 hr_recruitment / hr.applicant             / reference (char)              : DEL
 hr_recruitment / hr.job                   / favorite_user_ids (many2many) : NEW relation: res.users, hasdefault
