@@ -145,10 +145,10 @@ class Product(models.Model):
                 '|',
                     '&',
                         ('state', '=', 'done'),
-                        ('date', '<=', from_date),
+                        ('date', '>=', from_date),
                     '&',
                         ('state', '!=', 'done'),
-                        ('date_expected', '<=', from_date),
+                        ('date_expected', '>=', from_date),
             ]
             domain_move_in += date_date_expected_domain_from
             domain_move_out += date_date_expected_domain_from
@@ -547,6 +547,13 @@ class Product(models.Model):
                     msg += '- %s \n' % product.display_name
                 raise UserError(msg)
         return res
+
+    def _filter_to_unlink(self):
+        domain = [('product_id', 'in', self.ids)]
+        lines = self.env['stock.production.lot'].read_group(domain, ['product_id'], ['product_id'])
+        linked_product_ids = [group['product_id'][0] for group in lines]
+        return super(Product, self - self.browse(linked_product_ids))._filter_to_unlink()
+
 
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
