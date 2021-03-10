@@ -7,11 +7,14 @@ renamed_modules = {
     'crm_reveal': 'crm_iap_lead',
     'document': 'attachment_indexation',
     'payment_ogone': 'payment_ingenico',
+    # OCA/event
+    'website_event_filter_selector': 'website_event_filter_city',
     # OCA/hr
     # TODO: Transform possible data
     'hr_skill': 'hr_skills',
     # OCA/manufacture
     'quality_control': 'quality_control_oca',
+    'quality_control_mrp': 'quality_control_mrp_oca',
     'quality_control_stock': 'quality_control_stock_oca',
     # OCA/stock-logistics-warehouse
     'stock_putaway_product_form': 'stock_putaway_product_template',
